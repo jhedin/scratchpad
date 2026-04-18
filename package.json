@@ -1,0 +1,13 @@
+{
+  "name": "scratchpad",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test solution.test.ts",
+    "watch": "node --experimental-strip-types --test --watch solution.test.ts",
+    "types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
