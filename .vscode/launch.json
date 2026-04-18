@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug solution.test.ts",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/solution.test.ts",
+      "runtimeArgs": ["--experimental-strip-types", "--test", "--inspect-brk=0"],
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
