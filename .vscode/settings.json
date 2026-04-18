@@ -10,6 +10,16 @@
     }
   ],
   "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
@@ -21,5 +31,17 @@
   "explorer.confirmDragAndDrop": false,
   "terminal.integrated.scrollback": 10000,
   "breadcrumbs.enabled": true,
-  "workbench.editor.enablePreview": false
+  "workbench.editor.enablePreview": false,
+  "editor.fontSize": 14,
+  "editor.lineHeight": 1.6,
+  "editor.minimap.enabled": false,
+  "editor.scrollbar.vertical": "hidden",
+  "editor.scrollbar.horizontal": "hidden",
+  "editor.overviewRulerBorder": false,
+  "editor.hideCursorInOverviewRuler": true,
+  "editor.renderLineHighlight": "all",
+  "workbench.startupEditor": "none",
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.statusBarMessageEnabled": true,
+  "errorLens.followCursor": true
 }

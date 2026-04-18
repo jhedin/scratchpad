@@ -23,10 +23,10 @@ scratchpad/
 
 ## Scripts
 
-| Command | Purpose |
-|---|---|
-| `npm test` | Run tests once |
-| `npm run watch` | Run tests in watch mode |
+| Command         | Purpose                     |
+| --------------- | --------------------------- |
+| `npm test`      | Run tests once              |
+| `npm run watch` | Run tests in watch mode     |
 | `npm run types` | Type-check without emitting |
 
 ## Key Decisions

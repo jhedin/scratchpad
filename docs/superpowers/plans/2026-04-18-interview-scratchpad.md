@@ -12,20 +12,21 @@
 
 ## File Map
 
-| File | Action | Purpose |
-|---|---|---|
-| `package.json` | Create | Scripts: test, watch, types |
-| `tsconfig.json` | Create | Editor IntelliSense only |
-| `solution.ts` | Create | Starter solution file |
-| `solution.test.ts` | Create | Starter test file |
-| `.gitignore` | Create | Ignore node_modules |
-| `~/.zshrc` | Modify | Add `scratch` function |
+| File               | Action | Purpose                     |
+| ------------------ | ------ | --------------------------- |
+| `package.json`     | Create | Scripts: test, watch, types |
+| `tsconfig.json`    | Create | Editor IntelliSense only    |
+| `solution.ts`      | Create | Starter solution file       |
+| `solution.test.ts` | Create | Starter test file           |
+| `.gitignore`       | Create | Ignore node_modules         |
+| `~/.zshrc`         | Modify | Add `scratch` function      |
 
 ---
 
 ### Task 1: Initialize package.json
 
 **Files:**
+
 - Create: `package.json`
 
 - [ ] **Step 1: Create package.json**
@@ -63,6 +64,7 @@ git commit -m "chore: init package.json with test/watch/types scripts"
 ### Task 2: Add tsconfig.json
 
 **Files:**
+
 - Create: `tsconfig.json`
 
 - [ ] **Step 1: Create tsconfig.json**
@@ -98,6 +100,7 @@ git commit -m "chore: add tsconfig for editor IntelliSense"
 ### Task 3: Add starter solution and test files
 
 **Files:**
+
 - Create: `solution.ts`
 - Create: `solution.test.ts`
 
@@ -127,6 +130,7 @@ describe("solution", () => {
 
 Run: `npm test`
 Expected output contains:
+
 ```
 ▶ solution
   ✔ returns input unchanged (placeholder)
@@ -150,6 +154,7 @@ git commit -m "feat: add starter solution and test files"
 ### Task 4: Add .gitignore
 
 **Files:**
+
 - Create: `.gitignore`
 
 - [ ] **Step 1: Create .gitignore**
@@ -174,9 +179,11 @@ git commit -m "chore: add gitignore"
 - [ ] **Step 1: Create GitHub repo**
 
 Run:
+
 ```bash
 gh repo create scratchpad --public --source=. --remote=origin --push
 ```
+
 Expected: Repo created at `https://github.com/jhedin/scratchpad`, all commits pushed.
 
 - [ ] **Step 2: Verify**
@@ -189,6 +196,7 @@ Expected: All 4 commits visible.
 ### Task 6: Add `scratch` shell command to .zshrc
 
 **Files:**
+
 - Modify: `~/.zshrc`
 
 - [ ] **Step 1: Read current end of .zshrc to find insertion point**
@@ -213,11 +221,14 @@ scratch() {
 - [ ] **Step 3: Reload and test**
 
 Run:
+
 ```bash
 source ~/.zshrc
 type scratch
 ```
+
 Expected:
+
 ```
 scratch is a shell function
 ```
@@ -232,6 +243,7 @@ Expected: `Usage: scratch <name>`
 ### Task 7: Verify VS Code debugger launch config
 
 **Files:**
+
 - Create: `.vscode/launch.json`
 
 - [ ] **Step 1: Create launch config**
@@ -245,7 +257,11 @@ Expected: `Usage: scratch <name>`
       "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/solution.test.ts",
-      "runtimeArgs": ["--experimental-strip-types", "--test", "--inspect-brk=0"],
+      "runtimeArgs": [
+        "--experimental-strip-types",
+        "--test",
+        "--inspect-brk=0"
+      ],
       "skipFiles": ["<node_internals>/**"]
     }
   ]
