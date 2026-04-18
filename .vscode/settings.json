@@ -1,0 +1,25 @@
+{
+  "nodejs-testing.extensions": [
+    {
+      "extensions": ["mjs", "cjs", "js"],
+      "parameters": []
+    },
+    {
+      "extensions": ["mts", "cts", "ts"],
+      "parameters": ["--experimental-strip-types"]
+    }
+  ],
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": "active",
+  "editor.suggestSelection": "first",
+  "files.autoSave": "onFocusChange",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "terminal.integrated.scrollback": 10000,
+  "breadcrumbs.enabled": true,
+  "workbench.editor.enablePreview": false
+}
