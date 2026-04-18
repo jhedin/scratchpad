@@ -5,10 +5,13 @@
   "scripts": {
     "test": "node --experimental-strip-types --test solution.test.ts",
     "watch": "node --experimental-strip-types --test --watch solution.test.ts",
-    "types": "tsc --noEmit"
+    "format": "prettier --write .",
+    "types": "tsc --noEmit",
+    "reset": "node --experimental-strip-types scripts/reset.ts"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
+    "prettier": "^3.8.3",
     "typescript": "^5.8.3"
   }
 }

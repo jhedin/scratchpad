@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "usernamehw.errorlens",
+    "esbenp.prettier-vscode",
+    "yoavbls.pretty-ts-errors",
+    "connor4312.nodejs-testing"
+  ]
+}
