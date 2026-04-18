@@ -1,6 +1,9 @@
-// Two Sum — given an array of numbers and a target, return indices of the two
-// numbers that add up to the target. Assume exactly one solution exists.
-export function twoSum(nums: number[], target: number): [number, number] {
+interface Props {
+  nums: number[];
+  target: number;
+}
+
+export function solution({ nums, target }: Props): number[] {
   const seen = new Map<number, number>();
   for (let i = 0; i < nums.length; i++) {
     const complement = target - nums[i];
