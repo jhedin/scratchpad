@@ -3,7 +3,9 @@ interface Props {
   target: number;
 }
 
-export function solution({ nums, target }: Props): number[] {
+type Result = [number, number];
+
+export function solution({ nums, target }: Props): Result {
   const seen = new Map<number, number>();
   for (let i = 0; i < nums.length; i++) {
     const complement = target - nums[i];
