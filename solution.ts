@@ -1,18 +1,43 @@
-interface Props {
-  nums: number[];
-  target: number;
+
+type Merchant = string
+
+interface Transaction {
+    merchant: Merchant
+    amount: number
+    timestamp: string
 }
 
-type Result = [number, number];
+interface Payout {
+    merchant: Merchant
+    payout: number
+    fees: number
+}
 
-export function solution({ nums, target }: Props): Result {
-  const seen = new Map<number, number>();
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (seen.has(complement)) {
-      return [seen.get(complement)!, i];
-    }
-    seen.set(nums[i], i);
-  }
-  throw new Error("No solution found");
+interface Props {
+    transactions: Transaction[]
+}
+
+type Result = Payout[]
+
+const BATCH_FEE = 5
+
+export function solution({ transactions }: Props): Result {
+
+    const merchantTransactions = Object.groupBy(transactions, transaction => transaction.merchant)
+    const payouts = Object.entries(merchantTransactions).map(([merchant, transactions]) => {
+        const transactionsByDay = Object.groupBy(transactions ?? [], transaction => parseDate(transaction.timestamp));
+        let batchCount = Object.keys(transactionsByDay).length
+        return {
+            merchant: merchant,
+            fees: BATCH_FEE * batchCount,
+            payout: transactions?.reduce((sum, next) => sum + next.amount, 0) ?? 0
+        }
+    })
+    console.table(payouts)
+
+    return payouts
+}
+
+function parseDate(date: string) {
+    return (date.match(/(?<date>[\d-]+)T.*/)?.groups ?? {})["date"]
 }

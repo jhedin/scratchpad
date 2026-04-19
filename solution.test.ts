@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 // assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
 // assert.strictEqual(a, b)     — primitives (===)
 // assert.ok(value)             — truthy check
@@ -7,21 +7,29 @@ import assert from "node:assert/strict";
 import { solution } from "./solution.ts";
 
 describe("solution", () => {
-  it("finds two numbers that add up to target", () => {
-    const props = { nums: [2, 7, 11, 15], target: 9 };
-    const expected = [0, 1];
-    assert.deepStrictEqual(solution(props), expected);
-  });
+    it("sums the transactions", () => {
 
-  it("works when answer is not at the start", () => {
-    const props = { nums: [3, 2, 4], target: 6 };
-    const expected = [1, 2];
-    assert.deepStrictEqual(solution(props), expected);
-  });
+        const transactions = [
+            { merchant: "m1", amount: 100, timestamp: "2024-01-01T10:00:00Z" },
+            { merchant: "m2", amount: 200, timestamp: "2024-01-01T11:00:00Z" },
+            { merchant: "m1", amount: 50, timestamp: "2024-01-01T14:00:00Z" },
+            { merchant: "m2", amount: 75, timestamp: "2024-01-01T16:00:00Z" },
+            { merchant: "m1", amount: -30, timestamp: "2024-01-01T17:00:00Z" }, // refund    
+            { merchant: "m2", amount: 75, timestamp: "2024-01-02T16:00:00Z" },
+        ];
 
-  it("handles duplicate values", () => {
-    const props = { nums: [3, 3], target: 6 };
-    const expected = [0, 1];
-    assert.deepStrictEqual(solution(props), expected);
-  });
+        const props = { transactions };
+        const expected =
+            [
+                { merchant: "m1", payout: 120, fees: 5 },
+                { merchant: "m2", payout: 350, fees: 10 },
+            ]
+        assert.deepStrictEqual(solution(props), expected);
+    });
+    it("empty transactions makes empty payouts", () => {
+
+        const props = { transactions: [] };
+        const expected = [];
+        assert.deepStrictEqual(solution(props), expected);
+    });
 });
