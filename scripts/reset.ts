@@ -3,20 +3,22 @@ import { execSync as exec } from "node:child_process";
 
 const placeholder = {
   solution: `interface Props {
-  nums: number[];
-  target: number;
+    nums: number[];
+    target: number;
 }
 
-export function solution({ nums, target }: Props): number[] {
-  const seen = new Map<number, number>();
-  for (let i = 0; i < nums.length; i++) {
-    const complement = target - nums[i];
-    if (seen.has(complement)) {
-      return [seen.get(complement)!, i];
+type Result = [number, number];
+
+export function solution({ nums, target }: Props): Result {
+    const seen = new Map<number, number>();
+    for (let i = 0; i < nums.length; i++) {
+        const complement = target - nums[i];
+        if (seen.has(complement)) {
+            return [seen.get(complement)!, i];
+        }
+        seen.set(nums[i], i);
     }
-    seen.set(nums[i], i);
-  }
-  throw new Error("No solution found");
+    throw new Error("No solution found");
 }
 `,
   test: `import { describe, it } from "node:test";
@@ -28,20 +30,23 @@ import assert from "node:assert/strict";
 import { solution } from "./solution.ts";
 
 describe("solution", () => {
-  it("finds two numbers that add up to target", () => {
-    const props = { nums: [2, 7, 11, 15], target: 9 };
-    assert.deepStrictEqual(solution(props), [0, 1]);
-  });
+    it("finds two numbers that add up to target", () => {
+        const props = { nums: [2, 7, 11, 15], target: 9 };
+        const expected = [0, 1];
+        assert.deepStrictEqual(solution(props), expected);
+    });
 
-  it("works when answer is not at the start", () => {
-    const props = { nums: [3, 2, 4], target: 6 };
-    assert.deepStrictEqual(solution(props), [1, 2]);
-  });
+    it("works when answer is not at the start", () => {
+        const props = { nums: [3, 2, 4], target: 6 };
+        const expected = [1, 2];
+        assert.deepStrictEqual(solution(props), expected);
+    });
 
-  it("handles duplicate values", () => {
-    const props = { nums: [3, 3], target: 6 };
-    assert.deepStrictEqual(solution(props), [0, 1]);
-  });
+    it("handles duplicate values", () => {
+        const props = { nums: [3, 3], target: 6 };
+        const expected = [0, 1];
+        assert.deepStrictEqual(solution(props), expected);
+    });
 });
 `,
 };
