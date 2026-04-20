@@ -1,18 +1,27 @@
-interface Props {
-    nums: number[];
-    target: number;
+
+type TransactionId = string
+
+interface Rule {
+    rule_id: string,
+    flagged_transactions: TransactionId[]
 }
 
-type Result = [number, number];
+interface Props {
+    rules: Rule[];
+    targetTransactionId: TransactionId
+}
 
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+type Result = { ruleIds: string[] };
+
+
+export function solution({ rules, targetTransactionId }: Props): Result {
+
+    let ruleIds = rules
+        .filter(rule => rule.flagged_transactions.findIndex(transaction => transaction === targetTransactionId) != -1)
+        .map(rule => rule.rule_id)
+
+    console.table(ruleIds)
+
+    return { ruleIds: ruleIds }
+
 }
