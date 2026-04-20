@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-strip-types --test solution.test.ts",
-    "watch": "node --experimental-strip-types --test --watch solution.test.ts",
+    "test": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec solution.test.ts",
+    "watch": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec --watch solution.test.ts",
     "format": "prettier --write .",
     "types": "tsc --noEmit",
     "reset": "node --experimental-strip-types scripts/reset.ts"
