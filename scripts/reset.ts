@@ -56,10 +56,10 @@ const diff = exec("git diff solution.ts solution.test.ts", { encoding: "utf8" })
 let branch = "solution";
 if (diff.trim()) {
   console.log("Asking Claude to name the branch...");
-  const raw = exec(
-    `claude -p "Output only a short git branch name (kebab-case, no prefix, max 4 words) that describes this solution. No explanation, no punctuation, just the branch name.\n\n${diff}"`,
-    { encoding: "utf8" }
-  ).trim();
+  const prompt =
+    "Output only a short git branch name (kebab-case, no prefix, max 4 words) that describes this solution. No explanation, no punctuation, just the branch name.\n\n" +
+    diff;
+  const raw = exec(`claude -p`, { encoding: "utf8", input: prompt }).trim();
   const match = raw.match(/^[a-z0-9]+(?:-[a-z0-9]+)*$/m);
   branch = match ? match[0] : "solution";
   console.log(`Saving to branch: ${branch}`);
