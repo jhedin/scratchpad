@@ -1,5 +1,5 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 // assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
 // assert.strictEqual(a, b)     — primitives (===)
 // assert.ok(value)             — truthy check
@@ -7,21 +7,14 @@ import assert from "node:assert/strict";
 import { solution } from "./solution.ts";
 
 describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
+    it("finds the shortest substring of s that contains every character of t", () => {
+
+        const s = "ADOBECODEBANC";
+        const t = "ABC";
+
+        const props = { s, t };
+        const expected = "BANC";
         assert.deepStrictEqual(solution(props), expected);
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
-    });
-
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
-    });
 });
