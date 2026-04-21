@@ -2,7 +2,10 @@ import { writeFileSync } from "node:fs";
 import { execSync as exec } from "node:child_process";
 
 const placeholder = {
-  solution: `interface Props {
+  solution: `
+
+
+interface Props {
     nums: number[];
     target: number;
 }
