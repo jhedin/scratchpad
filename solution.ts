@@ -1,20 +1,14 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
+export interface RetryOptions {
+    sleep?: (ms: number) => Promise<void>;
 }
 
-type Result = [number, number];
-
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function callWithRetry<T>(
+    url: string,
+    init?: RequestInit,
+    options: RetryOptions = {},
+): Promise<T> {
+    // TODO: implement
+    const res = await fetch(url, init);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as T;
 }

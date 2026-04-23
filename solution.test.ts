@@ -1,27 +1,69 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import { callWithRetry } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function json(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), { status });
+}
+
+describe("callWithRetry on 429", () => {
+    it("honors Retry-After (seconds) and succeeds after waiting", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call === 1) {
+                return new Response("slow", { status: 429, headers: { "Retry-After": "2" } });
+            }
+            return json({ result: "ok" });
+        });
+        const out = await callWithRetry<{ result: string }>("https://api.example.test/x", undefined, {
+            sleep: fakeSleep,
+        });
+        assert.deepStrictEqual(out, { result: "ok" });
+        assert.deepStrictEqual(sleeps, [2000], "should sleep 2000ms (2 seconds)");
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("falls back to backoff on 429 WITHOUT Retry-After", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call === 1) return new Response("slow", { status: 429 });
+            return json({ result: "ok" });
+        });
+        const out = await callWithRetry<{ result: string }>("https://api.example.test/x", undefined, {
+            sleep: fakeSleep,
+        });
+        assert.deepStrictEqual(out, { result: "ok" });
+        assert.strictEqual(sleeps.length, 1);
+        assert.ok(sleeps[0]! >= 75 && sleeps[0]! <= 125, `first sleep should be ~100ms ±25%, got ${sleeps[0]}`);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("retries on 5xx with exponential backoff", async (t: TestContext) => {
+        const fakeSleep = async () => {};
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call < 4) return new Response("oops", { status: 503 });
+            return json({ result: "ok" });
+        });
+        const out = await callWithRetry<{ result: string }>("https://api.example.test/x", undefined, {
+            sleep: fakeSleep,
+        });
+        assert.deepStrictEqual(out, { result: "ok" });
+        assert.strictEqual(call, 4);
+    });
+
+    it("throws immediately on 4xx (non-429)", async (t: TestContext) => {
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            return new Response("bad", { status: 400 });
+        });
+        await assert.rejects(() => callWithRetry("https://api.example.test/x"));
+        assert.strictEqual(call, 1);
     });
 });
