@@ -54,3 +54,42 @@ describe("getVersion", () => {
         assert.strictEqual(await getVersion("https://example.test"), null);
     });
 });
+
+describe("timeout option", () => {
+    it("returns false from isHealthy when the request exceeds timeoutMs", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+            // Simulate a request that waits until its AbortSignal fires.
+            return await new Promise<Response>((_resolve, reject) => {
+                const signal = init?.signal;
+                if (signal) {
+                    signal.addEventListener("abort", () =>
+                        reject(new DOMException("The operation was aborted.", "AbortError")),
+                    );
+                }
+            });
+        });
+        const start = Date.now();
+        const result = await isHealthy("https://example.test", { timeoutMs: 50 });
+        const elapsed = Date.now() - start;
+        assert.strictEqual(result, false);
+        assert.ok(elapsed < 500, `expected <500ms, got ${elapsed}`);
+    });
+
+    it("returns null from getVersion when the request exceeds timeoutMs", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+            return await new Promise<Response>((_resolve, reject) => {
+                const signal = init?.signal;
+                if (signal) {
+                    signal.addEventListener("abort", () =>
+                        reject(new DOMException("The operation was aborted.", "AbortError")),
+                    );
+                }
+            });
+        });
+        const start = Date.now();
+        const result = await getVersion("https://example.test", { timeoutMs: 50 });
+        const elapsed = Date.now() - start;
+        assert.strictEqual(result, null);
+        assert.ok(elapsed < 500, `expected <500ms, got ${elapsed}`);
+    });
+});
