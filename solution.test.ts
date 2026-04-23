@@ -66,3 +66,15 @@ describe("listRepos", () => {
         assert.strictEqual(callCount, 1);
     });
 });
+
+describe("listRepos single-page case (no Link header)", () => {
+    it("returns the single page when Link header is absent", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            reposResponse([
+                { id: 1, full_name: "solo/repo", stargazers_count: 42 },
+            ]),
+        );
+        const repos = await listRepos("https://api.example.test", "solo");
+        assert.deepStrictEqual(repos.map((r) => r.id), [1]);
+    });
+});
