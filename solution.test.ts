@@ -1,27 +1,61 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import axios, { type AxiosResponse, type AxiosError } from "axios";
+import { callWithRetry } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function ok<T>(data: T): AxiosResponse<T> {
+    return { data, status: 200, statusText: "OK", headers: {}, config: {} as any } as AxiosResponse<T>;
+}
+
+function axiosErr(status: number): AxiosError {
+    const err = new Error(`Request failed with status code ${status}`) as AxiosError;
+    err.isAxiosError = true;
+    err.response = {
+        data: { msg: "failure" },
+        status,
+        statusText: "",
+        headers: {},
+        config: {} as any,
+    } as AxiosResponse;
+    return err;
+}
+
+describe("callWithRetry (axios)", () => {
+    it("returns data on 2xx", async (t: TestContext) => {
+        t.mock.method(axios, "get", async () => ok({ result: 42 }));
+        const out = await callWithRetry<{ result: number }>("https://api.example.test/x");
+        assert.deepStrictEqual(out, { result: 42 });
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("retries on 503 and eventually succeeds", async (t: TestContext) => {
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            if (call < 4) throw axiosErr(503);
+            return ok({ result: "ok" });
+        });
+        const out = await callWithRetry<{ result: string }>("https://api.example.test/x");
+        assert.deepStrictEqual(out, { result: "ok" });
+        assert.strictEqual(call, 4);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("throws on 4xx without retry", async (t: TestContext) => {
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            throw axiosErr(400);
+        });
+        await assert.rejects(() => callWithRetry("https://api.example.test/x"));
+        assert.strictEqual(call, 1);
+    });
+
+    it("gives up after 3 retries on persistent 5xx", async (t: TestContext) => {
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            throw axiosErr(502);
+        });
+        await assert.rejects(() => callWithRetry("https://api.example.test/x"));
+        assert.strictEqual(call, 4);
     });
 });

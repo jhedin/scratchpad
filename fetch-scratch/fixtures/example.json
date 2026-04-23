@@ -1,6 +1,0 @@
-{
-    "items": [
-        { "id": "evt_1", "amount_cents": 1250, "currency": "usd" },
-        { "id": "evt_2", "amount_cents": 790, "currency": "usd" }
-    ]
-}
