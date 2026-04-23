@@ -1,27 +1,46 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import { readAllEvents } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function sseResponse(payload: string): Response {
+    return new Response(payload, {
+        status: 200,
+        headers: { "Content-Type": "text/event-stream" },
+    });
+}
+
+describe("readAllEvents", () => {
+    it("collects data events until [DONE]", async (t: TestContext) => {
+        const payload =
+            `data: {"type":"ping","n":1}\n\n` +
+            `data: {"type":"ping","n":2}\n\n` +
+            `data: {"type":"done"}\n\n` +
+            `data: [DONE]\n\n`;
+        t.mock.method(globalThis, "fetch", async () => sseResponse(payload));
+        const events = await readAllEvents("https://api.example.test");
+        assert.deepStrictEqual(events, [
+            { type: "ping", n: 1 },
+            { type: "ping", n: 2 },
+            { type: "done" },
+        ]);
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("skips SSE comments (lines starting with ':')", async (t: TestContext) => {
+        const payload =
+            `: comment 1\n\n` +
+            `data: {"n":1}\n\n` +
+            `: keep-alive\n\n` +
+            `data: {"n":2}\n\n` +
+            `data: [DONE]\n\n`;
+        t.mock.method(globalThis, "fetch", async () => sseResponse(payload));
+        const events = await readAllEvents("https://api.example.test");
+        assert.deepStrictEqual(events, [{ n: 1 }, { n: 2 }]);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("handles a stream with no events (only [DONE])", async (t: TestContext) => {
+        const payload = `data: [DONE]\n\n`;
+        t.mock.method(globalThis, "fetch", async () => sseResponse(payload));
+        const events = await readAllEvents("https://api.example.test");
+        assert.deepStrictEqual(events, []);
     });
 });
