@@ -1,20 +1,6 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
-}
-
-type Result = [number, number];
-
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function callWithRetry<T>(url: string, init?: RequestInit): Promise<T> {
+    // TODO: implement retry with exponential backoff 100/200/400ms on 5xx, fail fast on 4xx
+    const res = await fetch(url, init);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()) as T;
 }
