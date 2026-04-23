@@ -1,27 +1,66 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import { listEvents } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function eventsResponse(ids: string[], hasMore: boolean, lastId?: string): Response {
+    const body: Record<string, unknown> = {
+        data: ids.map((id) => ({ id, type: "test", created_at: "2026-01-01" })),
+        has_more: hasMore,
+    };
+    if (lastId !== undefined) body.last_id = lastId;
+    return new Response(JSON.stringify(body), { status: 200 });
+}
+
+describe("listEvents", () => {
+    it("returns single page when has_more is false", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            eventsResponse(["evt_1", "evt_2"], false),
+        );
+        const events = await listEvents("https://api.example.test", "sk_test_x");
+        assert.deepStrictEqual(
+            events.map((e) => e.id),
+            ["evt_1", "evt_2"],
+        );
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("follows has_more across pages using last_id", async (t: TestContext) => {
+        const calls: Array<string | null> = [];
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            calls.push(url.searchParams.get("starting_after"));
+            if (calls.length === 1) return eventsResponse(["evt_1", "evt_2"], true, "evt_2");
+            return eventsResponse(["evt_3"], false);
+        });
+        const events = await listEvents("https://api.example.test", "sk_test_x");
+        assert.deepStrictEqual(
+            events.map((e) => e.id),
+            ["evt_1", "evt_2", "evt_3"],
+        );
+        assert.deepStrictEqual(calls, [null, "evt_2"]);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("falls back to last event id when last_id is missing but has_more is true", async (t: TestContext) => {
+        const calls: Array<string | null> = [];
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            calls.push(url.searchParams.get("starting_after"));
+            if (calls.length === 1) return eventsResponse(["a", "b", "c"], true); // no last_id!
+            return eventsResponse(["d"], false);
+        });
+        const events = await listEvents("https://api.example.test", "sk_test_x");
+        assert.deepStrictEqual(
+            events.map((e) => e.id),
+            ["a", "b", "c", "d"],
+        );
+        assert.deepStrictEqual(calls, [null, "c"]);
+    });
+
+    it("sends default limit=100", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("limit"), "100");
+            return eventsResponse([], false);
+        });
+        await listEvents("https://api.example.test", "sk_test_x");
     });
 });

@@ -1,20 +1,10 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
+export interface Event {
+    id: string;
+    type: string;
+    created_at: string;
 }
 
-type Result = [number, number];
-
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function listEvents(baseUrl: string, token: string): Promise<Event[]> {
+    // TODO: implement — fetch all pages, concatenate
+    return [];
 }
