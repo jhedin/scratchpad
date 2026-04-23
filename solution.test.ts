@@ -1,27 +1,47 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import { listUsers } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+describe("listUsers", () => {
+    it("sends the bearer token and returns the users array", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+            const headers = new Headers(init?.headers);
+            assert.strictEqual(headers.get("Authorization"), "Bearer sk_test_abc");
+            return new Response(
+                JSON.stringify({ users: [{ id: "u_1", name: "A", role: "admin", active: true }] }),
+                { status: 200 },
+            );
+        });
+        const users = await listUsers("https://api.example.test", "sk_test_abc", {});
+        assert.strictEqual(users.length, 1);
+        assert.strictEqual(users[0]!.id, "u_1");
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("encodes role and active as query params (active uses the 'yes'/'no' wire format)", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("role"), "admin");
+            assert.strictEqual(url.searchParams.get("active"), "yes");
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", { role: "admin", active: true });
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("encodes active=false as 'no'", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("active"), "no");
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", { active: false });
+    });
+
+    it("encodes limit", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("limit"), "50");
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", { limit: 50 });
     });
 });
