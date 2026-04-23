@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { fetchMany } from "./solution.ts";
+import { defaultFetcher, fetchMany } from "./solution.ts";
 
 function delay<T>(ms: number, value: T): Promise<T> {
     return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -44,5 +44,13 @@ describe("fetchMany (node-fetch variant)", () => {
     it("handles empty input", async () => {
         const out = await fetchMany([], async (u: string) => u, 5);
         assert.deepStrictEqual(out, []);
+    });
+});
+
+describe("defaultFetcher", () => {
+    it("is exported and rejects when URL is unreachable", async () => {
+        // Use a localhost port that should reject connection — we're only verifying the function exists
+        // and throws rather than hangs.
+        await assert.rejects(() => defaultFetcher("http://127.0.0.1:1/nonexistent"));
     });
 });
