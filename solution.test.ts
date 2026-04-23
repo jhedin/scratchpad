@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, type TestContext } from "node:test";
-import { callWithRetry } from "./solution.ts";
+import { callWithRetry, RateLimitError } from "./solution.ts";
 
 function json(body: unknown, status = 200): Response {
     return new Response(JSON.stringify(body), { status });
@@ -109,5 +109,40 @@ describe("callWithRetry with HTTP-date Retry-After", () => {
         });
         await callWithRetry("https://api.example.test/x", undefined, { sleep: fakeSleep });
         assert.ok(sleeps[0]! >= 75 && sleeps[0]! <= 125, `expected ~100ms backoff, got ${sleeps[0]}`);
+    });
+});
+
+describe("callWithRetry maxTotalWaitMs budget", () => {
+    it("throws RateLimitError when server requests wait longer than remaining budget", async (t: TestContext) => {
+        const fakeSleep = async () => {};
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response("slow", { status: 429, headers: { "Retry-After": "60" } }),
+        );
+        await assert.rejects(
+            () => callWithRetry("https://api.example.test/x", undefined, {
+                sleep: fakeSleep,
+                maxTotalWaitMs: 5000,
+            }),
+            (err: Error) => {
+                assert.ok(err instanceof RateLimitError, `expected RateLimitError, got ${err.constructor.name}`);
+                assert.strictEqual((err as RateLimitError).retryAfterMs, 60000);
+                return true;
+            },
+        );
+    });
+
+    it("honors smaller Retry-After under budget", async (t: TestContext) => {
+        const fakeSleep = async () => {};
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call === 1) return new Response("slow", { status: 429, headers: { "Retry-After": "1" } });
+            return json({ result: "ok" });
+        });
+        const out = await callWithRetry<{ result: string }>("https://api.example.test/x", undefined, {
+            sleep: fakeSleep,
+            maxTotalWaitMs: 5000,
+        });
+        assert.deepStrictEqual(out, { result: "ok" });
     });
 });
