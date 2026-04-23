@@ -1,27 +1,36 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it } from "node:test";
+import { createHmac } from "node:crypto";
+import { verifyWebhook } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function sign(secret: string, timestamp: number, body: string): string {
+    return createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
+}
+
+describe("verifyWebhook", () => {
+    const secret = "whsec_test";
+    const body = '{"event":"charge.succeeded","amount":1000}';
+    const ts = 1700000000;
+
+    it("returns true for a valid signature", () => {
+        const v1 = sign(secret, ts, body);
+        const header = `t=${ts},v1=${v1}`;
+        assert.strictEqual(verifyWebhook(body, header, secret), true);
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("returns false for a mismatched signature", () => {
+        const header = `t=${ts},v1=${"0".repeat(64)}`;
+        assert.strictEqual(verifyWebhook(body, header, secret), false);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("returns false for a malformed header", () => {
+        assert.strictEqual(verifyWebhook(body, "not-a-valid-header", secret), false);
+        assert.strictEqual(verifyWebhook(body, "", secret), false);
+    });
+
+    it("tolerates whitespace around header segments", () => {
+        const v1 = sign(secret, ts, body);
+        const header = ` t=${ts} , v1=${v1} `;
+        assert.strictEqual(verifyWebhook(body, header, secret), true);
     });
 });
