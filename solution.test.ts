@@ -45,3 +45,39 @@ describe("callWithRetry", () => {
         assert.strictEqual(call, 4);
     });
 });
+
+describe("callWithRetry with injected sleep + jitter", () => {
+    it("calls the injected sleep function on retries", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call < 4) return new Response("unavailable", { status: 503 });
+            return json({ result: "ok" });
+        });
+        await callWithRetry("https://api.example.test/x", undefined, { sleep: fakeSleep });
+        assert.strictEqual(sleeps.length, 3, "3 sleeps for 3 retries");
+    });
+
+    it("applies ±25% jitter to each backoff interval", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call < 4) return new Response("unavailable", { status: 503 });
+            return json({ result: "ok" });
+        });
+        await callWithRetry("https://api.example.test/x", undefined, { sleep: fakeSleep });
+        // Expected base intervals 100, 200, 400; with ±25% jitter: [75-125, 150-250, 300-500].
+        assert.ok(sleeps[0]! >= 75 && sleeps[0]! <= 125, `first sleep ${sleeps[0]} not in [75,125]`);
+        assert.ok(sleeps[1]! >= 150 && sleeps[1]! <= 250, `second sleep ${sleeps[1]} not in [150,250]`);
+        assert.ok(sleeps[2]! >= 300 && sleeps[2]! <= 500, `third sleep ${sleeps[2]} not in [300,500]`);
+        // At least one should not be exactly the base (i.e. jitter did something)
+        assert.ok(
+            sleeps[0] !== 100 || sleeps[1] !== 200 || sleeps[2] !== 400,
+            "jitter never changed any interval (implausible)",
+        );
+    });
+});
