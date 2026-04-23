@@ -83,3 +83,43 @@ describe("createCharge throws ApiError", () => {
         );
     });
 });
+
+describe("ApiError.retryable classification", () => {
+    it("api_error type is retryable", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(
+                JSON.stringify({ error: { type: "api_error", code: "server_busy", message: "try again" } }),
+                { status: 503 },
+            ),
+        );
+        await assert.rejects(
+            () => createCharge("https://api.example.test", "sk_test_x", { amount: 1, currency: "usd", source: "tok_x" }),
+            (err: Error) => (err as ApiError).retryable === true,
+        );
+    });
+
+    it("card_error type is NOT retryable", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(
+                JSON.stringify({ error: { type: "card_error", code: "card_declined", message: "declined" } }),
+                { status: 402 },
+            ),
+        );
+        await assert.rejects(
+            () => createCharge("https://api.example.test", "sk_test_x", { amount: 1, currency: "usd", source: "tok_x" }),
+            (err: Error) => (err as ApiError).retryable === false,
+        );
+    });
+
+    it("unknown type defaults to not retryable", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(JSON.stringify({ error: { type: "weird_type", code: "?", message: "?" } }), {
+                status: 400,
+            }),
+        );
+        await assert.rejects(
+            () => createCharge("https://api.example.test", "sk_test_x", { amount: 1, currency: "usd", source: "tok_x" }),
+            (err: Error) => (err as ApiError).retryable === false,
+        );
+    });
+});

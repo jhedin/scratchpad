@@ -21,6 +21,7 @@ export class ApiError extends Error {
     code: string;
     param: string | null;
     status: number;
+    retryable: boolean;
     constructor(shape: ErrorShape, status: number) {
         super(`${shape.type}/${shape.code}: ${shape.message}`);
         this.name = "ApiError";
@@ -28,6 +29,11 @@ export class ApiError extends Error {
         this.code = shape.code;
         this.param = shape.param ?? null;
         this.status = status;
+        // TODO: set retryable based on type
+        //   - "api_error"  -> true
+        //   - "card_error" -> false
+        //   - anything else -> false (conservative)
+        this.retryable = false;
     }
 }
 
@@ -57,8 +63,7 @@ export async function createCharge(
     if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         const shape = extractError(json);
-        // TODO: throw ApiError instead of plain Error, with status attached
-        throw new Error(`${shape.type}/${shape.code}: ${shape.message}`);
+        throw new ApiError(shape, res.status);
     }
     return (await res.json()) as Charge;
 }
