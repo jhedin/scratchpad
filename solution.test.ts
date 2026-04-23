@@ -67,3 +67,47 @@ describe("callWithRetry on 429", () => {
         assert.strictEqual(call, 1);
     });
 });
+
+describe("callWithRetry with HTTP-date Retry-After", () => {
+    it("parses Retry-After as an HTTP-date and sleeps until that time", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        // Fix "now" so the test is deterministic
+        const baseTime = 1700000000000; // 2023-11-14T22:13:20Z
+        const originalNow = Date.now;
+        Date.now = () => baseTime;
+        try {
+            const futureDate = new Date(baseTime + 5000).toUTCString(); // 5 seconds in the future
+            let call = 0;
+            t.mock.method(globalThis, "fetch", async () => {
+                call++;
+                if (call === 1) {
+                    return new Response("slow", { status: 429, headers: { "Retry-After": futureDate } });
+                }
+                return json({ result: "ok" });
+            });
+            const out = await callWithRetry<{ result: string }>("https://api.example.test/x", undefined, {
+                sleep: fakeSleep,
+            });
+            assert.deepStrictEqual(out, { result: "ok" });
+            assert.strictEqual(sleeps.length, 1);
+            // Allow small tolerance for parsing precision
+            assert.ok(sleeps[0]! >= 4000 && sleeps[0]! <= 6000, `expected ~5000ms, got ${sleeps[0]}`);
+        } finally {
+            Date.now = originalNow;
+        }
+    });
+
+    it("falls back to backoff when Retry-After is not parseable as number or date", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call === 1) return new Response("slow", { status: 429, headers: { "Retry-After": "banana" } });
+            return json({ result: "ok" });
+        });
+        await callWithRetry("https://api.example.test/x", undefined, { sleep: fakeSleep });
+        assert.ok(sleeps[0]! >= 75 && sleeps[0]! <= 125, `expected ~100ms backoff, got ${sleeps[0]}`);
+    });
+});
