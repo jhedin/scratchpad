@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, type TestContext } from "node:test";
-import { readAllEvents } from "./solution.ts";
+import { iterEvents, readAllEvents } from "./solution.ts";
 
 function sseResponse(payload: string): Response {
     return new Response(payload, {
@@ -90,5 +90,50 @@ describe("readAllEvents with split chunks", () => {
         );
         const events = await readAllEvents("https://api.example.test");
         assert.deepStrictEqual(events, [{ n: 1 }, { n: 2 }]);
+    });
+});
+
+describe("iterEvents", () => {
+    it("yields events one at a time", async (t: TestContext) => {
+        const payload =
+            `data: {"n":1}\n\ndata: {"n":2}\n\ndata: {"n":3}\n\ndata: [DONE]\n\n`;
+        t.mock.method(globalThis, "fetch", async () => sseResponse(payload));
+        const seen: unknown[] = [];
+        for await (const ev of iterEvents("https://api.example.test")) {
+            seen.push(ev);
+        }
+        assert.deepStrictEqual(seen, [{ n: 1 }, { n: 2 }, { n: 3 }]);
+    });
+
+    it("cancels the underlying reader when consumer breaks early", async (t: TestContext) => {
+        let cancelCalled = false;
+        // Build a ReadableStream that notes when it's cancelled.
+        const stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+                const enc = new TextEncoder();
+                controller.enqueue(enc.encode(`data: {"n":1}\n\n`));
+                controller.enqueue(enc.encode(`data: {"n":2}\n\n`));
+                controller.enqueue(enc.encode(`data: [DONE]\n\n`));
+                controller.close();
+            },
+            cancel() {
+                cancelCalled = true;
+            },
+        });
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(stream, {
+                status: 200,
+                headers: { "Content-Type": "text/event-stream" },
+            }),
+        );
+        const seen: unknown[] = [];
+        for await (const ev of iterEvents("https://api.example.test")) {
+            seen.push(ev);
+            break;
+        }
+        assert.strictEqual(seen.length, 1);
+        // Give the finalization a tick
+        await new Promise((r) => setImmediate(r));
+        assert.strictEqual(cancelCalled, true, "reader.cancel() should propagate to stream cancel");
     });
 });

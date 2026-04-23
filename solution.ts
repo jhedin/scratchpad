@@ -15,25 +15,16 @@ function parseEvents(chunk: string): { events: Event[]; done: boolean } {
     return { events, done: false };
 }
 
+export async function* iterEvents(baseUrl: string): AsyncGenerator<Event> {
+    // TODO: implement as async generator. Must cancel the reader on early break.
+    //       Use a try/finally block and call reader.cancel() in finally.
+    throw new Error("iterEvents not implemented");
+}
+
 export async function readAllEvents(baseUrl: string): Promise<Event[]> {
-    const res = await fetch(`${baseUrl}/events/stream`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    if (!res.body) throw new Error("no response body");
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
     const out: Event[] = [];
-    // TODO: buffer across reads. Currently parses each chunk in isolation, which breaks when
-    //       an event spans chunk boundaries (JSON.parse throws on partial content).
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        const parsed = parseEvents(chunk);
-        out.push(...parsed.events);
-        if (parsed.done) {
-            await reader.cancel();
-            return out;
-        }
+    for await (const event of iterEvents(baseUrl)) {
+        out.push(event);
     }
     return out;
 }
