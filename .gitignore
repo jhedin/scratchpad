@@ -1,2 +1,5 @@
 node_modules/
-fetch-scratch/package-lock.json
+package-lock.json
+.test-output/
+.integration-output/
+output/
