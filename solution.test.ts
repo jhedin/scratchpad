@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { defaultFetcher, fetchMany } from "./solution.ts";
+import { defaultFetcher, fetchMany, type Result } from "./solution.ts";
 
 function delay<T>(ms: number, value: T): Promise<T> {
     return new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -9,7 +9,10 @@ function delay<T>(ms: number, value: T): Promise<T> {
 describe("fetchMany (node-fetch variant)", () => {
     it("returns results in URL input order", async () => {
         const urls = ["a", "b", "c", "d", "e"];
-        const out = await fetchMany(urls, async (u) => delay((6 - u.charCodeAt(0) + 96) * 5, u.toUpperCase()), 3);
+        const out = await fetchMany(urls, {
+            fetcher: async (u) => delay((6 - u.charCodeAt(0) + 96) * 5, u.toUpperCase()),
+            concurrency: 3,
+        });
         assert.deepStrictEqual(out, ["A", "B", "C", "D", "E"]);
     });
 
@@ -17,32 +20,34 @@ describe("fetchMany (node-fetch variant)", () => {
         let inFlight = 0;
         let maxInFlight = 0;
         const urls = Array.from({ length: 20 }, (_, i) => String(i));
-        await fetchMany(
-            urls,
-            async (u) => {
+        await fetchMany(urls, {
+            fetcher: async (u) => {
                 inFlight++;
                 maxInFlight = Math.max(maxInFlight, inFlight);
                 await delay(5, null);
                 inFlight--;
                 return u;
             },
-            4,
-        );
+            concurrency: 4,
+        });
         assert.ok(maxInFlight <= 4, `maxInFlight should be <= 4, got ${maxInFlight}`);
         assert.ok(maxInFlight >= 2);
     });
 
     it("throws on first fetcher error", async () => {
         await assert.rejects(() =>
-            fetchMany(["a", "b", "c"], async (u) => {
-                if (u === "b") throw new Error("boom");
-                return u;
-            }, 2),
+            fetchMany(["a", "b", "c"], {
+                fetcher: async (u) => {
+                    if (u === "b") throw new Error("boom");
+                    return u;
+                },
+                concurrency: 2,
+            }),
         );
     });
 
     it("handles empty input", async () => {
-        const out = await fetchMany([], async (u: string) => u, 5);
+        const out = await fetchMany([], { fetcher: async (u: string) => u, concurrency: 5 });
         assert.deepStrictEqual(out, []);
     });
 });
@@ -52,5 +57,23 @@ describe("defaultFetcher", () => {
         // Use a localhost port that should reject connection — we're only verifying the function exists
         // and throws rather than hangs.
         await assert.rejects(() => defaultFetcher("http://127.0.0.1:1/nonexistent"));
+    });
+});
+
+describe("fetchMany onError: 'collect'", () => {
+    it("returns all outcomes without throwing", async () => {
+        const out = await fetchMany(["a", "b", "c", "d"], {
+            fetcher: async (u) => {
+                if (u === "b") throw new Error("fail-b");
+                return u.toUpperCase();
+            },
+            concurrency: 2,
+            onError: "collect",
+        });
+        assert.strictEqual(out.length, 4);
+        assert.deepStrictEqual(out[0], { ok: true, value: "A" });
+        assert.strictEqual((out[1] as Result<string>).ok, false);
+        assert.deepStrictEqual(out[2], { ok: true, value: "C" });
+        assert.deepStrictEqual(out[3], { ok: true, value: "D" });
     });
 });
