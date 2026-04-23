@@ -14,26 +14,29 @@ interface Page {
     last_id?: string;
 }
 
+export async function* iterateEvents(
+    baseUrl: string,
+    token: string,
+    options: ListEventsOptions = {},
+): AsyncGenerator<Event> {
+    // TODO: implement as an async generator that fetches pages lazily and yields events one at a time.
+    // Validate pageSize as in Part 2.
+    // Break out of the fetch loop as soon as the consumer stops iterating.
+    throw new Error("iterateEvents not implemented");
+}
+
 export async function listEvents(
     baseUrl: string,
     token: string,
     options: ListEventsOptions = {},
 ): Promise<Event[]> {
-    // TODO: validate options.pageSize (default 100, max 1000, min 1; throw RangeError on out-of-bounds)
     const limit = options.pageSize ?? 100;
+    if (limit < 1 || limit > 1000) {
+        throw new RangeError(`pageSize must be between 1 and 1000, got ${limit}`);
+    }
     const out: Event[] = [];
-    let startingAfter: string | undefined;
-    while (true) {
-        const url = new URL(`${baseUrl}/events`);
-        url.searchParams.set("limit", String(limit));
-        if (startingAfter !== undefined) url.searchParams.set("starting_after", startingAfter);
-        const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const page = (await res.json()) as Page;
-        out.push(...page.data);
-        if (!page.has_more) break;
-        startingAfter = page.last_id ?? page.data[page.data.length - 1]?.id;
-        if (startingAfter === undefined) break;
+    for await (const event of iterateEvents(baseUrl, token, options)) {
+        out.push(event);
     }
     return out;
 }

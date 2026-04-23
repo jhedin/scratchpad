@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, type TestContext } from "node:test";
-import { listEvents } from "./solution.ts";
+import { listEvents, iterateEvents } from "./solution.ts";
 
 function eventsResponse(ids: string[], hasMore: boolean, lastId?: string): Response {
     const body: Record<string, unknown> = {
@@ -87,5 +87,36 @@ describe("listEvents pageSize option", () => {
             () => listEvents("https://api.example.test", "sk_test_x", { pageSize: 0 }),
             RangeError,
         );
+    });
+});
+
+describe("iterateEvents", () => {
+    it("yields events one at a time across pages", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            const sa = url.searchParams.get("starting_after");
+            if (sa === null) return eventsResponse(["a", "b"], true, "b");
+            return eventsResponse(["c"], false);
+        });
+        const seen: string[] = [];
+        for await (const ev of iterateEvents("https://api.example.test", "sk_test_x")) {
+            seen.push(ev.id);
+        }
+        assert.deepStrictEqual(seen, ["a", "b", "c"]);
+    });
+
+    it("stops fetching when the consumer breaks early", async (t: TestContext) => {
+        let fetchCallCount = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            fetchCallCount++;
+            return eventsResponse(["a", "b"], true, "b");
+        });
+        const seen: string[] = [];
+        for await (const ev of iterateEvents("https://api.example.test", "sk_test_x")) {
+            seen.push(ev.id);
+            break; // stop after first
+        }
+        assert.deepStrictEqual(seen, ["a"]);
+        assert.strictEqual(fetchCallCount, 1, "should only have fetched the first page");
     });
 });
