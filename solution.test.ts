@@ -64,3 +64,28 @@ describe("listEvents", () => {
         await listEvents("https://api.example.test", "sk_test_x");
     });
 });
+
+describe("listEvents pageSize option", () => {
+    it("respects custom pageSize", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("limit"), "250");
+            return eventsResponse([], false);
+        });
+        await listEvents("https://api.example.test", "sk_test_x", { pageSize: 250 });
+    });
+
+    it("throws RangeError when pageSize > 1000", async () => {
+        await assert.rejects(
+            () => listEvents("https://api.example.test", "sk_test_x", { pageSize: 1001 }),
+            RangeError,
+        );
+    });
+
+    it("throws RangeError when pageSize < 1", async () => {
+        await assert.rejects(
+            () => listEvents("https://api.example.test", "sk_test_x", { pageSize: 0 }),
+            RangeError,
+        );
+    });
+});
