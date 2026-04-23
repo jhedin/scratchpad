@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, type TestContext } from "node:test";
-import { listRepos } from "./solution.ts";
+import { iterateRepos, listRepos, TooManyPagesError } from "./solution.ts";
 
 function reposResponse(repos: Array<{ id: number; full_name: string; stargazers_count: number }>, linkHeader?: string): Response {
     return new Response(JSON.stringify(repos), {
@@ -76,5 +76,40 @@ describe("listRepos single-page case (no Link header)", () => {
         );
         const repos = await listRepos("https://api.example.test", "solo");
         assert.deepStrictEqual(repos.map((r) => r.id), [1]);
+    });
+});
+
+describe("iterateRepos", () => {
+    it("yields repos one at a time across pages", async (t: TestContext) => {
+        let call = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            call++;
+            if (call === 1) {
+                return reposResponse(
+                    [{ id: 1, full_name: "a/b", stargazers_count: 1 }],
+                    '</users/owner/repos?page=2>; rel="next"',
+                );
+            }
+            return reposResponse([{ id: 2, full_name: "c/d", stargazers_count: 2 }]);
+        });
+        const seen: number[] = [];
+        for await (const r of iterateRepos("https://api.example.test", "owner")) {
+            seen.push(r.id);
+        }
+        assert.deepStrictEqual(seen, [1, 2]);
+    });
+
+    it("throws TooManyPagesError when maxPages is exceeded", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            reposResponse(
+                [{ id: 1, full_name: "a/b", stargazers_count: 1 }],
+                '</users/owner/repos?page=2>; rel="next"',
+            ),
+        );
+        await assert.rejects(async () => {
+            for await (const _r of iterateRepos("https://api.example.test", "owner", { maxPages: 2 })) {
+                // consume
+            }
+        }, TooManyPagesError);
     });
 });
