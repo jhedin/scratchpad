@@ -59,3 +59,23 @@ describe("listUsers with createdAfter", () => {
         });
     });
 });
+
+describe("listUsers omits undefined filters from URL", () => {
+    it("does not send role= when filters.role is undefined", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.has("role"), false);
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", {});
+    });
+
+    it("does not include any query string when all filters are undefined", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.search, "");
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", {});
+    });
+});
