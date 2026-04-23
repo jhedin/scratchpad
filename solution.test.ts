@@ -34,3 +34,30 @@ describe("verifyWebhook", () => {
         assert.strictEqual(verifyWebhook(body, header, secret), true);
     });
 });
+
+describe("verifyWebhook timestamp tolerance", () => {
+    const secret = "whsec_test";
+    const body = '{"x":1}';
+    const ts = 1700000000;
+
+    it("rejects when timestamp is older than tolerance", () => {
+        const v1 = sign(secret, ts, body);
+        const header = `t=${ts},v1=${v1}`;
+        const now = () => ts + 400; // 400s past the signed timestamp, default 300 tolerance
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), false);
+    });
+
+    it("accepts within tolerance", () => {
+        const v1 = sign(secret, ts, body);
+        const header = `t=${ts},v1=${v1}`;
+        const now = () => ts + 100;
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), true);
+    });
+
+    it("honors custom toleranceSeconds", () => {
+        const v1 = sign(secret, ts, body);
+        const header = `t=${ts},v1=${v1}`;
+        const now = () => ts + 60;
+        assert.strictEqual(verifyWebhook(body, header, secret, { toleranceSeconds: 30, now }), false);
+    });
+});
