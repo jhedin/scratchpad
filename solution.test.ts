@@ -45,3 +45,17 @@ describe("listUsers", () => {
         await listUsers("https://api.example.test", "sk_test_abc", { limit: 50 });
     });
 });
+
+describe("listUsers with createdAfter", () => {
+    it("sends createdAfter as an ISO-8601 string under created_after", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input : new URL(String(input));
+            assert.strictEqual(url.searchParams.get("created_after"), "2026-01-15T12:00:00.000Z");
+            assert.strictEqual(url.searchParams.get("createdAfter"), null, "must not send camelCase");
+            return new Response(JSON.stringify({ users: [] }), { status: 200 });
+        });
+        await listUsers("https://api.example.test", "sk_test_abc", {
+            createdAfter: new Date(Date.UTC(2026, 0, 15, 12, 0, 0)),
+        });
+    });
+});
