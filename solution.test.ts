@@ -11,27 +11,28 @@ describe("verifyWebhook", () => {
     const secret = "whsec_test";
     const body = '{"event":"charge.succeeded","amount":1000}';
     const ts = 1700000000;
+    const now = () => ts + 10;
 
     it("returns true for a valid signature", () => {
         const v1 = sign(secret, ts, body);
         const header = `t=${ts},v1=${v1}`;
-        assert.strictEqual(verifyWebhook(body, header, secret), true);
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), true);
     });
 
     it("returns false for a mismatched signature", () => {
         const header = `t=${ts},v1=${"0".repeat(64)}`;
-        assert.strictEqual(verifyWebhook(body, header, secret), false);
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), false);
     });
 
     it("returns false for a malformed header", () => {
-        assert.strictEqual(verifyWebhook(body, "not-a-valid-header", secret), false);
-        assert.strictEqual(verifyWebhook(body, "", secret), false);
+        assert.strictEqual(verifyWebhook(body, "not-a-valid-header", secret, { now }), false);
+        assert.strictEqual(verifyWebhook(body, "", secret, { now }), false);
     });
 
     it("tolerates whitespace around header segments", () => {
         const v1 = sign(secret, ts, body);
         const header = ` t=${ts} , v1=${v1} `;
-        assert.strictEqual(verifyWebhook(body, header, secret), true);
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), true);
     });
 });
 
@@ -59,5 +60,23 @@ describe("verifyWebhook timestamp tolerance", () => {
         const header = `t=${ts},v1=${v1}`;
         const now = () => ts + 60;
         assert.strictEqual(verifyWebhook(body, header, secret, { toleranceSeconds: 30, now }), false);
+    });
+});
+
+describe("verifyWebhook multi-v1 (key rotation)", () => {
+    const secret = "whsec_test";
+    const body = '{"x":1}';
+    const ts = 1700000000;
+    const now = () => ts + 10;
+
+    it("accepts when any v1 matches", () => {
+        const goodV1 = sign(secret, ts, body);
+        const header = `t=${ts},v1=${"0".repeat(64)},v1=${goodV1}`;
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), true);
+    });
+
+    it("rejects when no v1 matches", () => {
+        const header = `t=${ts},v1=${"0".repeat(64)},v1=${"1".repeat(64)}`;
+        assert.strictEqual(verifyWebhook(body, header, secret, { now }), false);
     });
 });

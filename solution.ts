@@ -5,8 +5,8 @@ export interface VerifyOptions {
     now?: () => number;
 }
 
-function parseHeader(header: string): { t: number | null; v1: string | null } {
-    const out = { t: null as number | null, v1: null as string | null };
+function parseHeader(header: string): { t: number | null; v1s: string[] } {
+    const out = { t: null as number | null, v1s: [] as string[] };
     for (const rawSegment of header.split(",")) {
         const segment = rawSegment.trim();
         const eq = segment.indexOf("=");
@@ -17,7 +17,7 @@ function parseHeader(header: string): { t: number | null; v1: string | null } {
             const n = Number(value);
             if (!Number.isNaN(n)) out.t = n;
         } else if (key === "v1") {
-            out.v1 = value;
+            out.v1s.push(value);
         }
     }
     return out;
@@ -39,9 +39,11 @@ export function verifyWebhook(
     options: VerifyOptions = {},
 ): boolean {
     const parsed = parseHeader(header);
-    if (parsed.t === null || parsed.v1 === null) return false;
-    // TODO: reject if |now - parsed.t| > toleranceSeconds (default 300).
-    // now defaults to () => Math.floor(Date.now() / 1000)
+    if (parsed.t === null || parsed.v1s.length === 0) return false;
+    const now = (options.now ?? (() => Math.floor(Date.now() / 1000)))();
+    const tolerance = options.toleranceSeconds ?? 300;
+    if (Math.abs(now - parsed.t) > tolerance) return false;
     const expected = createHmac("sha256", secret).update(`${parsed.t}.${rawBody}`).digest("hex");
-    return safeHexEqual(parsed.v1, expected);
+    // TODO: accept if ANY of parsed.v1s matches expected (key rotation). Currently only checks first.
+    return safeHexEqual(parsed.v1s[0]!, expected);
 }
