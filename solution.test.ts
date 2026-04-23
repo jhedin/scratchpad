@@ -1,27 +1,48 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it } from "node:test";
+import { fetchMany } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function delay<T>(ms: number, value: T): Promise<T> {
+    return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+}
+
+describe("fetchMany (node-fetch variant)", () => {
+    it("returns results in URL input order", async () => {
+        const urls = ["a", "b", "c", "d", "e"];
+        const out = await fetchMany(urls, async (u) => delay((6 - u.charCodeAt(0) + 96) * 5, u.toUpperCase()), 3);
+        assert.deepStrictEqual(out, ["A", "B", "C", "D", "E"]);
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("caps concurrency", async () => {
+        let inFlight = 0;
+        let maxInFlight = 0;
+        const urls = Array.from({ length: 20 }, (_, i) => String(i));
+        await fetchMany(
+            urls,
+            async (u) => {
+                inFlight++;
+                maxInFlight = Math.max(maxInFlight, inFlight);
+                await delay(5, null);
+                inFlight--;
+                return u;
+            },
+            4,
+        );
+        assert.ok(maxInFlight <= 4, `maxInFlight should be <= 4, got ${maxInFlight}`);
+        assert.ok(maxInFlight >= 2);
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("throws on first fetcher error", async () => {
+        await assert.rejects(() =>
+            fetchMany(["a", "b", "c"], async (u) => {
+                if (u === "b") throw new Error("boom");
+                return u;
+            }, 2),
+        );
+    });
+
+    it("handles empty input", async () => {
+        const out = await fetchMany([], async (u: string) => u, 5);
+        assert.deepStrictEqual(out, []);
     });
 });
