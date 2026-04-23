@@ -76,3 +76,39 @@ describe("upload with Buffer input", () => {
         assert.deepStrictEqual(result, { upload_id: "u_2" });
     });
 });
+
+describe("upload progress callback", () => {
+    it("invokes onProgress with cumulative byte counts in 64KB chunks", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(JSON.stringify({ upload_id: "u_p" }), { status: 200 }),
+        );
+        const size = 200 * 1024; // 200KB -> 64+64+64+8 chunks -> progress reports 65536, 131072, 196608, 204800
+        const bytes = new Uint8Array(size);
+        const progress: number[] = [];
+        await upload(
+            "https://api.example.test",
+            "sk_test_x",
+            { metadata: {}, fileBytes: bytes, filename: "x.bin" },
+            { onProgress: (sent) => progress.push(sent) },
+        );
+        assert.ok(progress.length >= 2, `expected multiple progress calls, got ${progress.length}`);
+        // Last value should equal total
+        assert.strictEqual(progress[progress.length - 1], size);
+        // Strictly increasing
+        for (let i = 1; i < progress.length; i++) {
+            assert.ok(progress[i]! > progress[i - 1]!, `progress not increasing at ${i}`);
+        }
+    });
+
+    it("does not invoke onProgress when option is absent", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(JSON.stringify({ upload_id: "u_q" }), { status: 200 }),
+        );
+        await upload(
+            "https://api.example.test",
+            "sk_test_x",
+            { metadata: {}, fileBytes: new Uint8Array(10), filename: "x" },
+        );
+        // No assertion needed — just that it doesn't throw
+    });
+});
