@@ -6,9 +6,17 @@ interface Me {
 
 type TokenInput = string | { apiKey: string };
 
+export class AuthError extends Error {
+    requestId: string | null;
+    constructor(message: string, requestId: string | null) {
+        super(message);
+        this.name = "AuthError";
+        this.requestId = requestId;
+    }
+}
+
 function normalizeToken(token: TokenInput): string {
-    // TODO: accept both string and { apiKey } shapes
-    return "";
+    return typeof token === "string" ? token : token.apiKey;
 }
 
 export async function whoAmI(baseUrl: string, token: TokenInput): Promise<Me> {
@@ -16,6 +24,10 @@ export async function whoAmI(baseUrl: string, token: TokenInput): Promise<Me> {
     const res = await fetch(`${baseUrl}/me`, {
         headers: { Authorization: `Bearer ${apiKey}` },
     });
+    if (res.status === 401) {
+        // TODO: throw AuthError with the X-Request-Id header propagated
+        throw new AuthError("Unauthorized", null);
+    }
     if (!res.ok) {
         const body = await res.text();
         throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
