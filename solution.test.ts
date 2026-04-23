@@ -36,3 +36,15 @@ describe("whoAmI", () => {
         );
     });
 });
+
+describe("whoAmI with config-object token", () => {
+    it("accepts { apiKey } shape and sends the same bearer header", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async (_input: RequestInfo | URL, init?: RequestInit) => {
+            const headers = new Headers(init?.headers);
+            assert.strictEqual(headers.get("Authorization"), "Bearer sk_test_xyz");
+            return new Response(JSON.stringify({ id: "u_2", email: "x@y.z", plan: "free" }), { status: 200 });
+        });
+        const me = await whoAmI("https://example.test", { apiKey: "sk_test_xyz" });
+        assert.deepStrictEqual(me, { id: "u_2", email: "x@y.z", plan: "free" });
+    });
+});
