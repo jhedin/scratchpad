@@ -1,20 +1,18 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
+export interface UploadPayload {
+    metadata: object;
+    fileBytes: Uint8Array;
+    filename: string;
 }
 
-type Result = [number, number];
+export interface UploadResponse {
+    upload_id: string;
+}
 
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function upload(
+    baseUrl: string,
+    token: string,
+    payload: UploadPayload,
+): Promise<UploadResponse> {
+    // TODO: implement multipart upload using FormData + Blob
+    throw new Error("not implemented");
 }
