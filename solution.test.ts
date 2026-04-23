@@ -80,3 +80,35 @@ describe("callWithRetry with jitter + injected sleep", () => {
         );
     });
 });
+
+describe("callWithRetry shouldRetry hook (axios)", () => {
+    it("custom shouldRetry can force retry on 429", async (t: TestContext) => {
+        const fakeSleep = async () => {};
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            if (call < 3) throw axiosErr(429);
+            return ok({ r: 1 });
+        });
+        const out = await callWithRetry(
+            "https://api.example.test/x",
+            undefined,
+            { sleep: fakeSleep, shouldRetry: (err) => (err.response?.status ?? 0) === 429 || (err.response?.status ?? 0) >= 500 },
+        );
+        assert.deepStrictEqual(out, { r: 1 });
+        assert.strictEqual(call, 3);
+    });
+
+    it("custom shouldRetry can suppress retry on 503", async (t: TestContext) => {
+        const fakeSleep = async () => {};
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            throw axiosErr(503);
+        });
+        await assert.rejects(() => callWithRetry("https://api.example.test/x", undefined, {
+            sleep: fakeSleep, shouldRetry: () => false,
+        }));
+        assert.strictEqual(call, 1);
+    });
+});
