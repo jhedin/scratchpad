@@ -1,14 +1,36 @@
+export type Result<R> = { ok: true; value: R } | { ok: false; error: unknown };
+
 export interface FetchManyOptions {
     concurrency?: number;
+    onError?: "fail-fast" | "collect";
 }
 
+// Function overloads:
+export async function fetchMany<T, R>(
+    items: T[],
+    fetcher: (item: T) => Promise<R>,
+    options: { concurrency?: number; onError?: "fail-fast" },
+): Promise<R[]>;
+export async function fetchMany<T, R>(
+    items: T[],
+    fetcher: (item: T) => Promise<R>,
+    options: { concurrency?: number; onError: "collect" },
+): Promise<Result<R>[]>;
+export async function fetchMany<T, R>(
+    items: T[],
+    fetcher: (item: T) => Promise<R>,
+    options?: FetchManyOptions,
+): Promise<R[] | Result<R>[]>;
 export async function fetchMany<T, R>(
     items: T[],
     fetcher: (item: T) => Promise<R>,
     options: FetchManyOptions = {},
-): Promise<R[]> {
-    // TODO: use options.concurrency (default 5). Currently hardcoded to 1 (serial).
-    const concurrency = 1;
+): Promise<R[] | Result<R>[]> {
+    const concurrency = options.concurrency ?? 5;
+    const mode = options.onError ?? "fail-fast";
+
+    // TODO: implement mode === "collect" — never throws, returns array of {ok, ...}.
+
     const results: R[] = new Array(items.length);
     let nextIndex = 0;
     let aborted = false;

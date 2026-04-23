@@ -64,3 +64,47 @@ describe("fetchMany options", () => {
         assert.ok(maxInFlight <= 5 && maxInFlight >= 2);
     });
 });
+
+describe("fetchMany onError: 'collect'", () => {
+    it("returns all outcomes (ok/err) without throwing", async () => {
+        const out = await fetchMany(
+            [1, 2, 3, 4],
+            async (n) => {
+                if (n === 2) throw new Error("fail-2");
+                return n * 10;
+            },
+            { concurrency: 2, onError: "collect" },
+        );
+        assert.strictEqual(out.length, 4);
+        assert.deepStrictEqual(out[0], { ok: true, value: 10 });
+        assert.strictEqual(out[1]!.ok, false);
+        assert.deepStrictEqual(out[2], { ok: true, value: 30 });
+        assert.deepStrictEqual(out[3], { ok: true, value: 40 });
+    });
+});
+
+describe("fetchMany fail-fast stops dispatching but lets in-flight finish", () => {
+    it("does not start items beyond the failing one", async () => {
+        const started: number[] = [];
+        const completed: number[] = [];
+        await assert.rejects(() =>
+            fetchMany(
+                [1, 2, 3, 4, 5, 6],
+                async (n) => {
+                    started.push(n);
+                    if (n === 3) {
+                        await delay(5, null);
+                        throw new Error("fail-3");
+                    }
+                    await delay(10, null);
+                    completed.push(n);
+                    return n;
+                },
+                { concurrency: 2 },
+            ),
+        );
+        // Item 3 triggered abort; items 5 and 6 should NOT have started.
+        assert.ok(!started.includes(5), "item 5 should not have started");
+        assert.ok(!started.includes(6), "item 6 should not have started");
+    });
+});
