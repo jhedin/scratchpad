@@ -1,27 +1,68 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe, it, type TestContext } from "node:test";
+import { listRepos } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+function reposResponse(repos: Array<{ id: number; full_name: string; stargazers_count: number }>, linkHeader?: string): Response {
+    return new Response(JSON.stringify(repos), {
+        status: 200,
+        headers: linkHeader ? { Link: linkHeader } : {},
+    });
+}
+
+describe("listRepos", () => {
+    it("follows rel=\"next\" across pages", async (t: TestContext) => {
+        const calls: string[] = [];
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input.href : String(input);
+            calls.push(url);
+            if (calls.length === 1) {
+                return reposResponse(
+                    [{ id: 1, full_name: "a/b", stargazers_count: 1 }],
+                    '<https://api.example.test/users/owner/repos?page=2>; rel="next", <https://api.example.test/users/owner/repos?page=3>; rel="last"',
+                );
+            }
+            if (calls.length === 2) {
+                return reposResponse(
+                    [{ id: 2, full_name: "c/d", stargazers_count: 2 }],
+                    '<https://api.example.test/users/owner/repos?page=3>; rel="next", <https://api.example.test/users/owner/repos?page=3>; rel="last"',
+                );
+            }
+            return reposResponse([{ id: 3, full_name: "e/f", stargazers_count: 3 }]);
+        });
+        const repos = await listRepos("https://api.example.test", "owner");
+        assert.deepStrictEqual(repos.map((r) => r.id), [1, 2, 3]);
+        assert.strictEqual(calls.length, 3);
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("handles relative Link URLs", async (t: TestContext) => {
+        const calls: string[] = [];
+        t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
+            const url = input instanceof URL ? input.href : String(input);
+            calls.push(url);
+            if (calls.length === 1) {
+                return reposResponse(
+                    [{ id: 1, full_name: "a/b", stargazers_count: 1 }],
+                    '</users/owner/repos?page=2>; rel="next"',
+                );
+            }
+            return reposResponse([{ id: 2, full_name: "c/d", stargazers_count: 2 }]);
+        });
+        const repos = await listRepos("https://api.example.test", "owner");
+        assert.deepStrictEqual(repos.map((r) => r.id), [1, 2]);
+        assert.strictEqual(calls[1], "https://api.example.test/users/owner/repos?page=2");
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("stops when the Link header has no rel=\"next\"", async (t: TestContext) => {
+        let callCount = 0;
+        t.mock.method(globalThis, "fetch", async () => {
+            callCount++;
+            return reposResponse(
+                [{ id: 1, full_name: "a/b", stargazers_count: 1 }],
+                '<https://api.example.test/users/owner/repos?page=1>; rel="prev", <https://api.example.test/users/owner/repos?page=1>; rel="first"',
+            );
+        });
+        const repos = await listRepos("https://api.example.test", "owner");
+        assert.strictEqual(repos.length, 1);
+        assert.strictEqual(callCount, 1);
     });
 });

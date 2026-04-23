@@ -1,20 +1,10 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
+export interface Repo {
+    id: number;
+    full_name: string;
+    stargazers_count: number;
 }
 
-type Result = [number, number];
-
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function listRepos(baseUrl: string, owner: string): Promise<Repo[]> {
+    // TODO: implement — fetch all pages by following rel="next" in Link header
+    return [];
 }
