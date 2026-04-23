@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it, type TestContext } from "node:test";
-import { createCharge } from "./solution.ts";
+import { createCharge, ApiError } from "./solution.ts";
 
 describe("createCharge", () => {
     it("POSTs JSON and returns the charge on 200", async (t: TestContext) => {
@@ -50,6 +50,36 @@ describe("createCharge", () => {
         await assert.rejects(
             () => createCharge("https://api.example.test", "sk_test_x", { amount: 1, currency: "usd", source: "tok_x" }),
             (err: Error) => err.message === "card_error/insufficient_funds: insufficient funds",
+        );
+    });
+});
+
+describe("createCharge throws ApiError", () => {
+    it("throws ApiError with status and param set", async (t: TestContext) => {
+        t.mock.method(globalThis, "fetch", async () =>
+            new Response(
+                JSON.stringify({
+                    error: {
+                        type: "validation_error",
+                        code: "missing_param",
+                        message: "Missing required param: source",
+                        param: "source",
+                    },
+                }),
+                { status: 400 },
+            ),
+        );
+        await assert.rejects(
+            () => createCharge("https://api.example.test", "sk_test_x", { amount: 1, currency: "usd", source: "tok_x" }),
+            (err: Error) => {
+                assert.ok(err instanceof ApiError, `expected ApiError, got ${err.constructor.name}`);
+                const api = err as ApiError;
+                assert.strictEqual(api.type, "validation_error");
+                assert.strictEqual(api.code, "missing_param");
+                assert.strictEqual(api.param, "source");
+                assert.strictEqual(api.status, 400);
+                return true;
+            },
         );
     });
 });
