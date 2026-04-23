@@ -1,17 +1,14 @@
 {
-  "name": "scratchpad",
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "test": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec solution.test.ts",
-    "watch": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec --watch solution.test.ts",
-    "format": "prettier --write .",
-    "types": "tsc --noEmit",
-    "reset": "node --experimental-strip-types scripts/reset.ts"
-  },
-  "devDependencies": {
-    "@types/node": "^25.6.0",
-    "prettier": "^3.8.3",
-    "typescript": "^5.8.3"
-  }
+    "name": "drill-11-concurrency-cap",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "test": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec solution.test.ts",
+        "watch": "node --experimental-strip-types --test --test-concurrency=1 --test-reporter=spec --watch solution.test.ts",
+        "types": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^25.6.0",
+        "typescript": "^5.8.3"
+    }
 }

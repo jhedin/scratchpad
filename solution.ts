@@ -1,20 +1,8 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
-}
-
-type Result = [number, number];
-
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function fetchMany<T, R>(
+    items: T[],
+    fetcher: (item: T) => Promise<R>,
+    concurrency: number = 5,
+): Promise<R[]> {
+    // TODO: pool pattern — at most `concurrency` in flight; results in input order
+    return [];
 }
