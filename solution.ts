@@ -1,20 +1,19 @@
-
-
-interface Props {
-    nums: number[];
-    target: number;
+export interface Charge {
+    id: string;
+    amount: number;
 }
 
-type Result = [number, number];
+export interface ChargeRequest {
+    amount: number;
+    currency: string;
+    source: string;
+}
 
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
+export async function createCharge(
+    baseUrl: string,
+    token: string,
+    body: ChargeRequest,
+): Promise<Charge> {
+    // TODO: implement
+    throw new Error("not implemented");
 }
