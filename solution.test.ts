@@ -59,3 +59,24 @@ describe("callWithRetry (axios)", () => {
         assert.strictEqual(call, 4);
     });
 });
+
+describe("callWithRetry with jitter + injected sleep", () => {
+    it("applies ±25% jitter to each backoff interval", async (t: TestContext) => {
+        const sleeps: number[] = [];
+        const fakeSleep = async (ms: number) => { sleeps.push(ms); };
+        let call = 0;
+        t.mock.method(axios, "get", async () => {
+            call++;
+            if (call < 4) throw axiosErr(503);
+            return ok({ r: 1 });
+        });
+        await callWithRetry("https://api.example.test/x", undefined, { sleep: fakeSleep });
+        assert.ok(sleeps[0]! >= 75 && sleeps[0]! <= 125);
+        assert.ok(sleeps[1]! >= 150 && sleeps[1]! <= 250);
+        assert.ok(sleeps[2]! >= 300 && sleeps[2]! <= 500);
+        assert.ok(
+            sleeps[0] !== 100 || sleeps[1] !== 200 || sleeps[2] !== 400,
+            "jitter never changed any interval (implausible)",
+        );
+    });
+});
