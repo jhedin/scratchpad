@@ -1,20 +1,36 @@
 
 
+
 interface Props {
-    nums: number[];
-    target: number;
+    coins: number[],
+    target: number
 }
 
-type Result = [number, number];
+type Result = number
 
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
+//Given a list of coin denominations (positive integers) and a target amount, return the minimum number of coins needed to make exactly the target. 
+// Return -1 if impossible. Coins can be used any number of times (unbounded).
+export function solution({ coins, target }: Props): Result {
+
+    let memos = new Array(target + 1).fill(Infinity)
+    memos[0] = 0
+    console.table(memos)
+
+    for (let coin of coins) {
+        for (let i = 0; i <= target; i++) {
+            let difference = i - coin
+            console.log(coin, i, difference, memos[difference])
+            if ((memos[difference] ?? Infinity) != Infinity) {
+                memos[i] = Math.min(memos[i], memos[difference] + 1)
+            }
         }
-        seen.set(nums[i], i);
+        console.table(memos)
     }
-    throw new Error("No solution found");
+
+    let result = memos[target]
+    if (result == Infinity) {
+        return -1
+    } else {
+        return result
+    }
 }
