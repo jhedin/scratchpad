@@ -1,20 +1,23 @@
+// Drill TS4: Template literal types.
+//
+// Part 1 — route paths.
+type Resource = "users" | "posts" | "comments";
+export type Route = `/${Resource}${"" | `${"/"}${string}`}`
 
+// Part 2 — event names.
+type Entity = "charge" | "customer";
+type Action = "created" | "updated" | "deleted";
+export type EventName = `${Entity}.${Action}`
 
-interface Props {
-    nums: number[];
-    target: number;
-}
+// Part 3 — uppercase.
+export type ScreamingEvent = /* fill in: "CHARGE.CREATED" | ... */ never;
 
-type Result = [number, number];
+// Verify
+const r1: Route = "/users";
+const r2: Route = "/users/abc123";
+// const r3: Route = "/orders"; // should fail
 
-export function solution({ nums, target }: Props): Result {
-    const seen = new Map<number, number>();
-    for (let i = 0; i < nums.length; i++) {
-        const complement = target - nums[i];
-        if (seen.has(complement)) {
-            return [seen.get(complement)!, i];
-        }
-        seen.set(nums[i], i);
-    }
-    throw new Error("No solution found");
-}
+const e1: EventName = "charge.created";
+// const e2: EventName = "charge.paid"; // should fail
+
+const s1: ScreamingEvent = "CHARGE.CREATED";

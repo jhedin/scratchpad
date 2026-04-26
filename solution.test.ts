@@ -1,27 +1,25 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-// assert.deepStrictEqual(a, b) — deep equality (arrays, objects, ignores key order)
-// assert.strictEqual(a, b)     — primitives (===)
-// assert.ok(value)             — truthy check
-// assert.throws(() => fn())    — expects an error
-import { solution } from "./solution.ts";
+import { describe as describeResult, type Result } from "./solution.ts";
 
-describe("solution", () => {
-    it("finds two numbers that add up to target", () => {
-        const props = { nums: [2, 7, 11, 15], target: 9 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+describe("Result discriminated union", () => {
+    it("describes loading", () => {
+        const r: Result<number> = { status: "loading" };
+        assert.strictEqual(describeResult(r), "loading...");
     });
 
-    it("works when answer is not at the start", () => {
-        const props = { nums: [3, 2, 4], target: 6 };
-        const expected = [1, 2];
-        assert.deepStrictEqual(solution(props), expected);
+    it("describes success", () => {
+        const r: Result<number> = { status: "success", data: 42 };
+        assert.strictEqual(describeResult(r), "got: 42");
     });
 
-    it("handles duplicate values", () => {
-        const props = { nums: [3, 3], target: 6 };
-        const expected = [0, 1];
-        assert.deepStrictEqual(solution(props), expected);
+    it("describes error", () => {
+        const r: Result<number> = { status: "error", error: new Error("oops") };
+        assert.match(describeResult(r), /error: oops/);
+    });
+
+    it("describes success with object data via JSON", () => {
+        const r: Result<{ id: string }> = { status: "success", data: { id: "x" } };
+        assert.strictEqual(describeResult(r), `got: {"id":"x"}`);
     });
 });
